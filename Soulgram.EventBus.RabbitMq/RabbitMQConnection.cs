@@ -3,15 +3,15 @@ using System;
 
 namespace Soulgram.EventBus.RabbitMq
 {
-	public class RabbitMQConnection : IRabbitMQConnection
+	public class RabbitMqConnection : IRabbitMqConnection
 	{
 		private readonly IConnectionFactory _connectionFactory;
-		IConnection _connection;
-		bool _disposed;
+		private IConnection _connection;
+		
+		private bool _disposed;
+		private readonly object _syncRoot = new object();
 
-		object sync_root = new object();
-
-		public RabbitMQConnection(IConnectionFactory connectionFactory)
+		public RabbitMqConnection(IConnectionFactory connectionFactory)
 		{
 			_connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
 		}
@@ -42,7 +42,7 @@ namespace Soulgram.EventBus.RabbitMq
 
 		public bool TryConnect()
 		{
-			lock (sync_root)
+			lock (_syncRoot)
 			{
 				_connection = _connectionFactory.CreateConnection();
 

@@ -12,16 +12,16 @@ namespace Soulgram.EventBus.RabbitMq
     // TODO add logging and exception handling
     public class EventBus : IEventBus, IDisposable
     {
-        private readonly IRabbitMQConnection _persistentConnection;
+        private readonly IRabbitMqConnection _persistentConnection;
         private readonly IEventBusSubscriptionsManager _subsManager;
         private readonly IServiceProvider _serviceProvider;
 
         private IModel _consumerChannel;
         private string _queueName;
-        private string _exchange;
+        private readonly string _exchange;
 
         public EventBus(
-            IRabbitMQConnection persistentConnection,
+            IRabbitMqConnection persistentConnection,
             IEventBusSubscriptionsManager subsManager,
             IServiceProvider serviceProvider,
             string exchange,

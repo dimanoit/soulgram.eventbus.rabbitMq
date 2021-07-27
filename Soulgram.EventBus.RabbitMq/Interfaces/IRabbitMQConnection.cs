@@ -3,7 +3,7 @@ using RabbitMQ.Client;
 
 namespace Soulgram.EventBus.RabbitMq
 {
-	public interface IRabbitMQConnection
+	public interface IRabbitMqConnection
 		: IDisposable
 	{
 		bool IsConnected { get; }
