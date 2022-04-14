@@ -38,57 +38,41 @@ namespace Soulgram.EventBus.RabbitMq
             _subsManager.OnEventRemoved += SubsManager_OnEventRemoved;
         }
 
-        private void SubsManager_OnEventRemoved(object sender, string eventName)
-        {
-            if (!_persistentConnection.IsConnected)
-            {
-                _persistentConnection.TryConnect();
-            }
-
-            using (var channel = _persistentConnection.CreateModel())
-            {
-                channel.QueueUnbind(queue: _queueName,
-                    exchange: _exchange,
-                    routingKey: eventName);
-
-                if (_subsManager.IsEmpty)
-                {
-                    _queueName = string.Empty;
-                    _consumerChannel.Close();
-                }
-            }
-        }
-
         public void Publish(IntegrationEvent @event)
         {
-            if (!_persistentConnection.IsConnected)
-            {
-                _persistentConnection.TryConnect();
-            }
+	        var eventName = @event.GetType().Name;
 
-            var eventName = @event.GetType().Name;
+	        var body = JsonSerializer.SerializeToUtf8Bytes(@event, @event.GetType(), new JsonSerializerOptions
+	        {
+		        WriteIndented = true
+	        });
 
-            using (var channel = _persistentConnection.CreateModel())
-            {
-                channel.ExchangeDeclare(exchange: _exchange, type: "direct");
-
-                var body = JsonSerializer.SerializeToUtf8Bytes(@event, @event.GetType(), new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-
-                var properties = channel.CreateBasicProperties();
-                properties.DeliveryMode = 2; // persistent
-
-                channel.BasicPublish(
-                    exchange: _exchange,
-                    routingKey: eventName,
-                    mandatory: true,
-                    basicProperties: properties,
-                    body: body);
-            }
+	        this.Publish(body,eventName);
         }
 
+        public void Publish(byte[] content, string eventName)
+        {
+	        if (!_persistentConnection.IsConnected)
+	        {
+		        _persistentConnection.TryConnect();
+	        }
+	        
+	        using (var channel = _persistentConnection.CreateModel())
+	        {
+		        channel.ExchangeDeclare(exchange: _exchange, type: "direct");
+		        
+		        var properties = channel.CreateBasicProperties();
+		        properties.DeliveryMode = 2; // persistent
+
+		        channel.BasicPublish(
+			        exchange: _exchange,
+			        routingKey: eventName,
+			        mandatory: true,
+			        basicProperties: properties,
+			        body: content);
+	        }
+        }
+        
         public void Subscribe<T, TH>()
             where T : IntegrationEvent
             where TH : IIntegrationEventHandler<T>
@@ -152,6 +136,27 @@ namespace Soulgram.EventBus.RabbitMq
 				consumer: consumer);
 		}
 
+        private void SubsManager_OnEventRemoved(object sender, string eventName)
+        {
+	        if (!_persistentConnection.IsConnected)
+	        {
+		        _persistentConnection.TryConnect();
+	        }
+
+	        using (var channel = _persistentConnection.CreateModel())
+	        {
+		        channel.QueueUnbind(queue: _queueName,
+			        exchange: _exchange,
+			        routingKey: eventName);
+
+		        if (_subsManager.IsEmpty)
+		        {
+			        _queueName = string.Empty;
+			        _consumerChannel.Close();
+		        }
+	        }
+        }
+        
 		private async Task Consumer_Received(object sender, BasicDeliverEventArgs eventArgs)
         {
             var eventName = eventArgs.RoutingKey;
